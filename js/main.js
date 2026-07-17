@@ -487,6 +487,7 @@ var Game = {
       self.updateHUD();
       self.startGameLoopOnce();
       var def = Level.STAGES[self._targetStage];
+      self.updateObsUI();
       self.showIntroCard(def);            // brief, skippable stage card
       if (def.startBanner) UI.banner(def.startBanner, 5000);
     }).catch(function (err) {
@@ -780,6 +781,49 @@ var Game = {
       var c = Level.CARDS[id];
       UI.toast('관찰 카드 획득 — ' + (c ? c.name : id));
     }
+    this.updateObsUI();          // the goal panel must move the instant a card lands
+  },
+
+  /* ---------- observation gate ----------
+     The source of truth is Save.progress.cards, NOT this.cards: the saved list is
+     written the moment a card is granted and survives death, retry and reload, so
+     an observation is never demanded twice. this.cards is only the current run. */
+  requiredObs: function (stageId) {
+    return (Level.REQUIRED_OBS && Level.REQUIRED_OBS[stageId]) || [];
+  },
+  missingObs: function (stageId) {
+    var have = Save.progress.cards || [];
+    return this.requiredObs(stageId).filter(function (id) { return have.indexOf(id) < 0; });
+  },
+  obsDone: function (stageId) { return this.missingObs(stageId).length === 0; },
+  obsNames: function (ids) {
+    return ids.map(function (id) {
+      var c = Level.CARDS[id];
+      return c ? c.name : id;
+    }).join(', ');
+  },
+
+  /* Shown when the player reaches a locked exit. Cooldown-guarded so walking into
+     the goal every frame cannot spam it, and it never stops movement or hurts. */
+  blockGoal: function () {
+    var now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (this._blockT && now - this._blockT < 2600) return;
+    this._blockT = now;
+    var miss = this.missingObs(this.stageId);
+    Audio_.sfx('fail');
+    UI.banner('아직 확인하지 않은 관찰 자료가 있어요.<br>파이프 안을 탐색하고 관찰 미션을 완료해 주세요.' +
+      (miss.length ? '<br><b>남은 관찰: ' + this.obsNames(miss) + '</b>' : ''), 3200);
+    this.updateObsUI();
+  },
+
+  /* Keeps the goal panel's observation line in step with the saved cards. */
+  updateObsUI: function () {
+    if (!UI.goal || !UI.goal.setObs) return;
+    var id = this.stageId;
+    var req = this.requiredObs(id);
+    if (!req.length) { UI.goal.setObs(null); return; }
+    var miss = this.missingObs(id);
+    UI.goal.setObs({ now: req.length - miss.length, total: req.length, missing: this.obsNames(miss) });
   },
 
   onPlayerDead: function () {
@@ -980,6 +1024,10 @@ var Game = {
   /* ---------- goal / clear ---------- */
   onGoal: function () {
     var self = this, w = this.world, def = w.def;
+    /* Real gate, not just a caption: this is the function that writes stagesDone
+       and hands out the next stage, so checking here means no route into the next
+       stage can skip the observations. */
+    if (!this.obsDone(def.id)) { this.blockGoal(); return; }
     w.player.state = 'clear';
     w.player.vx = 0; w.player.vy = 0;
     Audio_.sfx('clear');
@@ -1049,6 +1097,20 @@ var Game = {
   /* ---------- ending ---------- */
   startEnding: function () {
     var self = this;
+    /* Belt and braces only. Each stage already refuses to end without its own
+       observations, so this should be unreachable in normal play — it exists so a
+       tampered save cannot reach the ending with an empty card set. */
+    var allReq = [];
+    Object.keys(Level.REQUIRED_OBS || {}).forEach(function (k) {
+      allReq = allReq.concat(Level.REQUIRED_OBS[k]);
+    });
+    var have = Save.progress.cards || [];
+    var missAll = allReq.filter(function (id) { return have.indexOf(id) < 0; });
+    if (missAll.length) {
+      console.warn('[Super Micro] ending reached without observations:', missAll);
+      UI.banner('아직 확인하지 않은 관찰 자료가 있어요.<br><b>남은 관찰: ' +
+                this.obsNames(missAll) + '</b>', 4200);
+    }
     this.state = 'ending-mission';
     UI.fade(true, function () {
       UI.show('scr-intro');

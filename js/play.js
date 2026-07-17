@@ -786,6 +786,7 @@ Checkpoint.prototype.draw = function (x, cam) {
 
 function Goal(x, y, world) {
   this.x = x; this.y = y; this.t = 0; this.active = !(world.def.boss); this.taken = false;
+  this.world = world;                 // draw() needs it to read the observation lock
 }
 Goal.prototype.update = function (dt, w) {
   this.t += dt;
@@ -793,17 +794,30 @@ Goal.prototype.update = function (dt, w) {
   var p = w.player;
   if (p.state !== 'play') return;
   if (U.aabb({ x: this.x - 6, y: this.y - 40, w: 28, h: 72 }, p.rect())) {
+    /* Locked until this stage's observation cards are in. Deliberately does NOT
+       set taken, block movement or damage: the player just walks away, reads what
+       is missing, and takes the pipe standing right next to them. */
+    if (w.game.obsDone && !w.game.obsDone(w.def.id)) { w.game.blockGoal(); return; }
     this.taken = true;
     w.game.onGoal();
   }
+};
+/* true once this stage's observations are done — drives the lock/unlock glow */
+Goal.prototype.unlocked = function (w) {
+  return !(w.game.obsDone && !w.game.obsDone(w.def.id));
 };
 Goal.prototype.draw = function (x, cam) {
   var A = W.SM.Assets;
   var base = A.img('st_portal_base'), ring = A.img('st_portal_ring');
   var cx = this.x - cam.x + 8, ground = this.y - cam.y + 16;
+  /* "open" means BOTH gates are clear: the boss (stage 4) and this stage's
+     observations. The dormant/blazing pair below already reads as locked vs
+     unlocked, so the observation lock just joins it — no new effect, no extra
+     blinking. */
+  var open = this.active && this.unlocked(this.world);
   if (!base || !ring) {
     var f = A.props.goal[Math.floor(this.t * 5) % 3];
-    x.save(); if (!this.active) x.globalAlpha = 0.35;
+    x.save(); if (!open) x.globalAlpha = 0.35;
     x.drawImage(f, cx - 14, ground - 56, 28, 56); x.restore();
     return;
   }
@@ -812,7 +826,7 @@ Goal.prototype.draw = function (x, cam) {
   var ringCy = ground - bh * 0.55 - rh * 0.42;
 
   // an inactive portal is visibly dormant; an active one blazes
-  if (this.active && !this.taken) {
+  if (open && !this.taken) {
     x.save();
     x.globalAlpha = 0.3 + Math.sin(this.t * 3) * 0.14;
     var g = x.createRadialGradient(cx, ringCy, 2, cx, ringCy, 40);
@@ -823,20 +837,20 @@ Goal.prototype.draw = function (x, cam) {
   // spinning ring
   x.save();
   x.translate(cx, ringCy);
-  x.rotate(this.active ? this.t * 1.6 : this.t * 0.25);
-  var pul = this.active ? 1 + Math.sin(this.t * 4) * 0.06 : 0.86;
+  x.rotate(open ? this.t * 1.6 : this.t * 0.25);
+  var pul = open ? 1 + Math.sin(this.t * 4) * 0.06 : 0.86;
   x.scale(pul, pul);
-  if (!this.active) x.filter = 'grayscale(0.8) brightness(0.55)';
-  x.globalAlpha = this.active ? 1 : 0.5;
+  if (!open) x.filter = 'grayscale(0.8) brightness(0.55)';
+  x.globalAlpha = open ? 1 : 0.5;
   x.drawImage(ring, -rw / 2, -rh / 2, rw, rh);
   x.restore();
   // base
   x.save();
-  if (!this.active) x.filter = 'grayscale(0.7) brightness(0.65)';
+  if (!open) x.filter = 'grayscale(0.7) brightness(0.65)';
   x.drawImage(base, cx - bw / 2, ground - bh, bw, bh);
   x.restore();
   // locked padlock hint
-  if (!this.active) {
+  if (!open) {
     x.save();
     x.globalAlpha = 0.75;
     x.fillStyle = '#dbe6f0'; x.strokeStyle = '#2b3a4a'; x.lineWidth = 0.9;

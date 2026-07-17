@@ -107,7 +107,26 @@ var UI = {
         self._hintT = setTimeout(tick, 7000);
       }, 7000);
     },
-    hideHint: function () { $('#goal-hint').classList.add('hidden'); }
+    hideHint: function () { $('#goal-hint').classList.add('hidden'); },
+
+    /* Observation progress lives on its own line, driven straight from the saved
+       cards. That keeps it independent of whichever objective the panel happens to
+       be showing, so it stays put when that objective completes and the title
+       switches away. */
+    setObs: function (o) {
+      var el = $('#gb-obs');
+      if (!el) return;
+      this._obs = o || null;
+      if (!o || !o.total) { el.textContent = ''; el.classList.add('hidden'); return; }
+      var done = o.now >= o.total;
+      el.textContent = done
+        ? '관찰 완료! 다음 구역으로 이동하세요.'
+        : '관찰 자료 ' + o.now + ' / ' + o.total + (o.missing ? ' · 남은 관찰: ' + o.missing : '');
+      el.classList.toggle('done', done);
+      el.classList.remove('hidden');
+      // the panel auto-hides between objectives; the observation line must survive
+      $('#goal-banner').classList.remove('hidden');
+    }
   },
 
   toast: function (msg, ms) {

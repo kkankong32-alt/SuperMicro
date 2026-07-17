@@ -217,17 +217,22 @@ var S1 = {
       '#########'
     ]),
     /* 17. goal */
+    /* The exit will not open until this stage's observation cards are collected,
+       and the observation pipe is ~100 tiles back. Rather than march the player
+       all the way there (and risk a one-way drop stranding them), the same room
+       gets a second entrance right beside the goal. Leaving it drops the player
+       back here, next to the exit. */
     seg([
       '...o.o.o....',
       '............',
       '......F.....',
-      '............',
-      '############',
-      '############',
-      '############'
+      '.PP.........',
+      '#pp#########',
+      '#pp#########',
+      '#pp#########'
     ])
   ]),
-  warps: { 0: { to: 'b1', kind: 'bonus' } },
+  warps: { 0: { to: 'b1', kind: 'bonus' }, 1: { to: 'b1', kind: 'bonus' } },
   devices: {
     /* One console opens the mission. The vent tower used to carry mission:'humidity'
        too, which made it a second, redundant start button for the same popup — and
@@ -430,17 +435,22 @@ var S2 = {
       '###....###',
       '###....###'
     ]),
+    /* The exit will not open until this stage's observation cards are collected,
+       and the observation pipe is ~100 tiles back. Rather than march the player
+       all the way there (and risk a one-way drop stranding them), the same room
+       gets a second entrance right beside the goal. Leaving it drops the player
+       back here, next to the exit. */
     seg([
       '...o.o.o....',
       '............',
       '......F.....',
-      '............',
-      '############',
-      '############',
-      '############'
+      '.PP.........',
+      '#pp#########',
+      '#pp#########',
+      '#pp#########'
     ])
   ]),
-  warps: { 0: { to: 'b2', kind: 'bonus' } },
+  warps: { 0: { to: 'b2', kind: 'bonus' }, 1: { to: 'b2', kind: 'bonus' } },
   devices: {
     G: { kind: 'valve', img: 'obj_water_purification_valve', w: 18, h: 20, mission: 'valves' },
     g: { kind: 'cpipe', img: 'obj_contamination_pipe', w: 26, h: 16, deco: true }
@@ -616,17 +626,22 @@ var S3 = {
       '################',
       '################'
     ]),
+    /* The exit will not open until this stage's observation cards are collected,
+       and the observation pipe is ~100 tiles back. Rather than march the player
+       all the way there (and risk a one-way drop stranding them), the same room
+       gets a second entrance right beside the goal. Leaving it drops the player
+       back here, next to the exit. */
     seg([
       '...o.o.o....',
       '............',
       '......F.....',
-      '............',
-      '############',
-      '############',
-      '############'
+      '.PP.........',
+      '#pp#########',
+      '#pp#########',
+      '#pp#########'
     ])
   ]),
-  warps: { 0: { to: 'b3', kind: 'bonus' } },
+  warps: { 0: { to: 'b3', kind: 'bonus' }, 1: { to: 'b3', kind: 'bonus' } },
   devices: {
     G: { kind: 'multi', w: 22, h: 24 },
     g: { kind: 'purifytile', img: 'obj_sterilization_station', w: 20, h: 22, deco: true }
@@ -828,6 +843,20 @@ var S4 = {
 var STAGES = { s1: S1, s2: S2, s3: S3, s4: S4, b1: B1, b2: B2, b3: B3 };
 var ORDER = ['s1', 's2', 's3', 's4'];
 
+/* ---------- required observation cards ----------
+   Keyed by stage. Every id here is a card granted INSIDE that stage's pipe room:
+     s1 -> b1 / scope_fungi    : shiitake, hyphae, spores
+     s2 -> b2 / scope_protist  : spirogyra, paramecium
+     s3 -> b3 / scope_bacteria : shapes  (the s3 classify mission grants the same
+                                 card, so either route counts)
+   Deliberately NOT here: 'pondwater' (valves reward) and 'breadmold'
+   (restore_mold reward) — they are not pipe observations. */
+var REQUIRED_OBS = {
+  s1: ['shiitake', 'hyphae', 'spores'],
+  s2: ['spirogyra', 'paramecium'],
+  s3: ['shapes']
+};
+
 var CARDS = {
   hyphae:    { name: '균사', img: 'micro_fungi_hyphae', desc: '실처럼 가늘고 긴 균사예요.' },
   spores:    { name: '포자가 든 주머니', img: 'micro_mold_spores', desc: '균류는 포자로 번식해요.' },
@@ -940,5 +969,6 @@ function build(def) {
            w: w, h: h, pxw: w * 16, pxh: h * 16 };
 }
 
-W.SM.Level = { STAGES: STAGES, ORDER: ORDER, CARDS: CARDS, build: build, H: H, seg: seg };
+W.SM.Level = { STAGES: STAGES, ORDER: ORDER, CARDS: CARDS, REQUIRED_OBS: REQUIRED_OBS,
+               build: build, H: H, seg: seg };
 })(window);
