@@ -134,6 +134,13 @@
     </div>
     <div id="goal-hint" class="hidden"></div>
 
+    <!-- ======= BACK-TO-PIPE ARROW =======
+         Points at the observation room when the gate turns the player around.
+         Pinned to the stage edge, so it is readable at any resolution. -->
+    <div id="back-arrow" class="hidden" aria-hidden="true">
+      <span class="ba-chev">◀</span><span class="ba-text">관찰실</span>
+    </div>
+
     <!-- ======= TOAST / SCIENCE BANNER ======= -->
     <div id="toast" class="hidden"></div>
     <div id="banner" class="hidden"><div class="banner-in"><p id="banner-text"></p></div></div>
@@ -221,12 +228,20 @@
 
     <!-- ======= STAGE CLEAR ======= -->
     <section id="scr-clear" class="screen overlay">
-      <div class="panel wide clear-panel">
-        <p class="clear-eyebrow">스테이지 클리어!</p>
-        <h2 id="clear-title"></h2>
-        <div class="clear-card"><img id="clear-img" alt=""><div class="clear-facts" id="clear-facts"></div></div>
-        <div class="clear-stats" id="clear-stats"></div>
-        <button class="btn primary" data-act="clear-next">계속하기 ▶</button>
+      <!-- The panel used to sit directly in the overlay, so on a short phone its
+           bottom (and the 계속하기 button with it) fell off-screen with nothing to
+           scroll. It now lives inside a scroller sized to the real viewport, and
+           the button is sticky at the bottom of the panel. -->
+      <div class="clear-scroll" id="clear-scroll">
+        <div class="panel wide clear-panel">
+          <p class="clear-eyebrow">스테이지 클리어!</p>
+          <h2 id="clear-title"></h2>
+          <div class="clear-card"><img id="clear-img" alt=""><div class="clear-facts" id="clear-facts"></div></div>
+          <div class="clear-stats" id="clear-stats"></div>
+          <div class="clear-actions">
+            <button class="btn primary" data-act="clear-next">계속하기 ▶</button>
+          </div>
+        </div>
       </div>
     </section>
 
