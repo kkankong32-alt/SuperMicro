@@ -362,6 +362,21 @@ body{
 #status-label.on{color:#eaffd6;border-color:rgba(142,230,63,.55)}
 #status-label.on::before{content:"●";color:var(--lime)}
 
+/* ===== back-to-pipe arrow =====
+   Appears only while the observation gate is turning the player around. */
+#back-arrow{
+  position:absolute;left:.6em;top:50%;transform:translateY(-50%);
+  z-index:16;pointer-events:none;
+  display:flex;align-items:center;gap:.3em;
+  padding:.35em .7em;border-radius:999px;
+  background:rgba(6,14,28,.86);border:1px solid var(--amber);
+  box-shadow:0 0 16px rgba(255,194,61,.45);
+  animation:baNudge 1.1s ease-in-out infinite;
+}
+#back-arrow .ba-chev{font-size:.8em;font-weight:900;color:var(--amber);line-height:1}
+#back-arrow .ba-text{font-size:.52em;font-weight:900;color:#ffe9b8;word-break:keep-all}
+@keyframes baNudge{50%{transform:translateY(-50%) translateX(-.35em)}}
+
 /* ===== touch ===== */
 #touch{position:absolute;inset:0;z-index:15;pointer-events:none}
 .pad-left,.pad-right{position:absolute;bottom:0;display:flex;gap:.5em;align-items:flex-end;
@@ -678,17 +693,78 @@ body{
 .bt-go{margin-top:.3em;font-size:.7em;padding:.55em 1.3em}
 .bt-done{font-size:.72em;font-weight:900;color:var(--lime);padding:1.4em .4em}
 
-/* ===== clear ===== */
-.clear-panel{gap:.5em}
+/* ===== clear =====
+   Desktop keeps the familiar centred panel. The scroller only earns its keep on
+   short screens, where the panel is taller than the viewport. */
+#scr-clear.active{display:block}
+.clear-scroll{
+  /* The overlay lives INSIDE #stage (16:9, letterboxed), so the scroller must be
+     the stage's size — 100dvh here would be the whole viewport and overflow it.
+     inset:0 gives exactly that; the dvh cap is a belt-and-braces guard for the
+     mobile address bar growing/shrinking. */
+  position:absolute; inset:0;
+  max-height:100vh; max-height:100dvh;
+  overflow-y:auto; overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  /* body sets touch-action:none to stop the game scrolling the page — this pane
+     has to opt back in or it cannot be swiped on a phone */
+  touch-action:pan-y;
+  display:flex;
+  padding:.8em;
+  padding-bottom:calc(.8em + env(safe-area-inset-bottom));
+}
+/* margin:auto (not align-items:center) — a centred flex child taller than its
+   container gets its top clipped with no way to scroll to it. */
+.clear-panel{gap:.5em;margin:auto;max-width:min(94%,34em)}
 .clear-eyebrow{font-size:.7em;font-weight:800;color:var(--lime);letter-spacing:.2em}
 .clear-card{display:grid;grid-template-columns:1fr 1.3fr;gap:.7em;align-items:center;width:100%;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:.6em;padding:.5em}
-.clear-card img{width:100%;border-radius:.4em;display:block}
+.clear-card img{width:100%;border-radius:.4em;display:block;object-fit:contain}
 .clear-facts{text-align:left;display:grid;gap:.3em}
-.clear-facts p{font-size:.68em;line-height:1.45;color:#cfe3f5;padding-left:.8em;position:relative}
+.clear-facts p{font-size:.68em;line-height:1.45;color:#cfe3f5;padding-left:.8em;position:relative;
+  word-break:keep-all;overflow-wrap:break-word}
 .clear-facts p::before{content:"●";position:absolute;left:0;color:var(--cyan);font-size:.6em;top:.35em}
-.clear-stats{display:flex;gap:.5em;font-size:.66em;color:var(--dim)}
+.clear-stats{display:flex;gap:.5em;font-size:.66em;color:var(--dim);flex-wrap:wrap;justify-content:center}
 .clear-stats b{color:var(--amber)}
+
+/* The button stays reachable no matter how far the content scrolls. */
+/* Solid, panel-wide bar rather than a floating pill: on a short screen the photo
+   scrolls underneath it, and a see-through button read as an accident. Negative
+   margins pull it out to the panel's edges so nothing peeks past the sides. */
+.clear-actions{
+  position:sticky; bottom:-1.2em; z-index:2;
+  /* .panel is a grid with justify-items:center, which shrink-wraps its children —
+     the bar has to opt out or it only covers the button's own width */
+  justify-self:stretch;
+  width:auto; display:flex; justify-content:center;
+  margin:.2em -1.4em -1.2em;
+  padding:.6em 1.4em calc(.6em + env(safe-area-inset-bottom));
+  /* fully opaque, not var(--panel)'s 93%: content scrolling underneath used to
+     ghost through behind the button */
+  background:#0a1426;
+  border-top:1px solid rgba(255,255,255,.10);
+  box-shadow:0 -10px 18px rgba(4,8,16,.55);
+  border-radius:0 0 var(--r) var(--r);
+}
+.clear-actions .btn{
+  min-height:48px;                 /* comfortable touch target */
+  max-width:100%; padding:.6em 1.6em;
+  white-space:nowrap;
+}
+
+@media (max-width:560px){
+  /* photo above text instead of beside it, so neither gets squeezed */
+  .clear-card{grid-template-columns:1fr;gap:.5em}
+  .clear-card img{max-height:30vh;margin:0 auto}
+  .clear-panel{max-width:100%}
+}
+@media (max-height:520px){
+  /* phone landscape: shrink the photo, never the words */
+  .clear-card img{max-height:34vh}
+  .clear-scroll{align-items:flex-start;padding:.5em .6em}
+  .clear-scroll{padding-bottom:calc(.6em + env(safe-area-inset-bottom))}
+}
 
 /* ===== ending ===== */
 #scr-ending{overflow:hidden}

@@ -170,7 +170,7 @@ World.prototype.openGateNear = function (x, opts) {
   for (var c = startC; c < Math.min(this.w, startC + 40) && !found; c++) {
     for (var r = 0; r < this.h; r++) {
       var m = this.meta[r][c];
-      if (this.grid[r][c] === 3 && m && m.t === 'brick') { found = c; break; }
+      if (this.grid[r][c] === 3 && m && m.t === 'brick' && !m.obsgate) { found = c; break; }
     }
   }
   if (found == null) return false;
@@ -179,7 +179,7 @@ World.prototype.openGateNear = function (x, opts) {
     var any = false;
     for (var rr = 0; rr < this.h; rr++) {
       var mm = this.meta[rr][cc];
-      if (this.grid[rr][cc] === 3 && mm && mm.t === 'brick') {
+      if (this.grid[rr][cc] === 3 && mm && mm.t === 'brick' && !mm.obsgate) {
         (function (cx, ry, d) {
           setTimeout(function () {
             self.setTile(cx, ry, 0);
@@ -192,6 +192,49 @@ World.prototype.openGateNear = function (x, opts) {
     }
     if (!any) break;
   }
+  Audio_.sfx('grow');
+  return true;
+};
+
+/* ---------- observation gate ----------
+   Opens only when this stage's observation cards are in hand. Same dissolve
+   language as the mission gates so it reads as "the wall you already know",
+   just triggered by learning instead of by a switch. */
+World.prototype.obsGateTiles = function () {
+  var out = [];
+  for (var c = 0; c < this.w; c++) {
+    for (var r = 0; r < this.h; r++) {
+      var m = this.meta[r][c];
+      if (m && m.obsgate && this.grid[r][c] === 3) out.push({ c: c, r: r });
+    }
+  }
+  return out;
+};
+World.prototype.obsGateX = function () {
+  var t = this.obsGateTiles();
+  if (!t.length) return null;
+  var min = t[0].c;
+  for (var i = 1; i < t.length; i++) if (t[i].c < min) min = t[i].c;
+  return min * TILE;
+};
+World.prototype.highlightPipe = function (pipe, secs) {
+  if (pipe) pipe.hi = secs || 4;
+};
+World.prototype.openObsGate = function () {
+  var tiles = this.obsGateTiles();
+  if (!tiles.length) return false;
+  var self = this, i = 0;
+  // bottom-up so it reads as the wall lifting rather than crumbling at random
+  tiles.sort(function (a, b) { return (b.r - a.r) || (a.c - b.c); });
+  tiles.forEach(function (t) {
+    setTimeout(function () {
+      self.setTile(t.c, t.r, 0);
+      self.particles(t.c * TILE + 8, t.r * TILE + 8, 6,
+        { c: '#7ff0ff', life: 0.55, up: 46 });
+    }, i * 42);
+    i++;
+  });
+  this.shake = 5;
   Audio_.sfx('grow');
   return true;
 };
@@ -863,6 +906,7 @@ Goal.prototype.draw = function (x, cam) {
 function Pipe(x, y, id, warp) { this.x = x; this.y = y; this.id = id; this.warp = warp; this.t = 0; }
 Pipe.prototype.update = function (dt, w) {
   this.t += dt;
+  if (this.hi > 0) this.hi -= dt;
   if (!this.warp) return;
   var p = w.player;
   if (p.state !== 'play' || !p.grounded) { this.near = false; return; }
@@ -887,6 +931,16 @@ Pipe.prototype.draw = function (x, cam) {
     x.drawImage(A.props.pipe, dx, dy, 32, 16);
   }
   if (this.warp) {
+    /* Briefly flare when the gate sends the player back, so "the pipe behind you"
+       is something they can actually spot rather than a direction to guess at. */
+    if (this.hi > 0) {
+      x.save();
+      x.globalAlpha = 0.5 + Math.sin(this.t * 10) * 0.35;
+      var hg = x.createRadialGradient(dx + 16, dy + 2, 2, dx + 16, dy + 2, 40);
+      hg.addColorStop(0, '#ffe58a'); hg.addColorStop(1, 'rgba(255,229,138,0)');
+      x.fillStyle = hg; x.fillRect(dx - 26, dy - 38, 84, 78);
+      x.restore();
+    }
     x.save();
     x.globalAlpha = 0.35 + Math.sin(this.t * 3) * 0.2;
     var g = x.createRadialGradient(dx + 16, dy + 4, 1, dx + 16, dy + 4, 12);

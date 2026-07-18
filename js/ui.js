@@ -935,27 +935,17 @@ function bacteriaSort(ctx, done) {
   load();
 }
 
-/* Pipe room (bonus 3): study only — it is the same A-step the required mission
-   uses, and finishing it here is what lets the required one skip ahead. */
+/* The pipe room now holds the COMPLETE activity: study the reference plate, then
+   read all six individual plates. It used to be split — study here, sorting at a
+   console out in the stage — which meant the stage taught the same thing twice.
+   The console is gone; its wall became the observation gate. */
 Missions.scope_bacteria = function (ctx, done) {
-  bacteriaStudy(function () {
-    if (ctx.game) ctx.game.grantCard('shapes');
-    UI.banner('세균에는 <b>공 모양</b>, <b>막대 모양</b>, <b>나선 모양</b> 등이 있어요.', 4200);
-    done(true);
-  });
+  bacteriaStudy(function () { bacteriaSort(ctx, done); });
 };
 
-/* S3 required. Study THEN read individual plates — but only study if it has not
-   already been done in the pipe room, which is what the 'shapes' card records. */
-Missions.classify = function (ctx, done) {
-  var studied = Save.progress.cards.indexOf('shapes') >= 0;
-  if (studied) {
-    bacteriaSort(ctx, done);
-    hint('이미 조사한 자료예요. 바로 판독을 시작할게요.', 'good');
-  } else {
-    bacteriaStudy(function () { bacteriaSort(ctx, done); });
-  }
-};
+/* Kept as an alias so any save or call site still naming 'classify' lands on the
+   one real activity instead of throwing. */
+Missions.classify = Missions.scope_bacteria;
 
 /* ---------- 세균 4단계: 사는 곳과 번식 조건 (S3) ----------
    New material, not a repeat: where bacteria live, and what makes them multiply.

@@ -569,6 +569,7 @@ var Game = {
     $('#touch').classList.add('hidden');
     $('#prompt').classList.add('hidden');
     $('#status-label').classList.add('hidden');
+    this.hideBackArrow();
     var card = $('#intro-card'); if (card) card.classList.add('hidden');
     UI.overlays.slice().forEach(function (o) { UI.closeOverlay(o); });
     UI.show('scr-title');
@@ -644,12 +645,19 @@ var Game = {
     for (var c = built.w - 1; c >= 0 && this.wallX == null; c--) {
       for (var r = 0; r < built.h; r++) {
         var m = built.meta[r][c];
-        if (built.grid[r][c] === 3 && m && m.t === 'brick' && c > built.w * 0.6) { this.wallX = c * 16; break; }
+        if (built.grid[r][c] === 3 && m && m.t === 'brick' && !m.obsgate &&
+            c > built.w * 0.6) { this.wallX = c * 16; break; }
       }
     }
     this.valvesShut = 0;
     this.restores = 0;
     this.bossSpawned = false;
+    /* Observation gate. Resolved from the built grid, so it is wherever the map
+       says it is. Already-earned cards open it immediately and silently — a
+       returning player must never be asked to redo the observation. */
+    this.obsGateX = null;
+    this.obsGateOpen = false;
+    this._gateMsgT = 0;
 
     $('#hud-stage').textContent = def.name;
     UI.goal.hide();
@@ -801,6 +809,80 @@ var Game = {
       var c = Level.CARDS[id];
       return c ? c.name : id;
     }).join(', ');
+  },
+
+  /* The pipe that holds this stage's observation room, so the player can be
+     pointed back at it by name and position rather than a vague "go back". */
+  obsPipe: function () {
+    var w = this.world;
+    if (!w) return null;
+    var best = null;
+    w.ents.forEach(function (e) {
+      if (e.warp && e.warp.kind === 'bonus') { if (!best || e.x < best.x) best = e; }
+    });
+    return best;
+  },
+
+  /* Runs every frame while playing. Opens the gate the moment the cards are in
+     (including on arrival, for a player who already did the room), and otherwise
+     explains what is missing and where to go. */
+  updateObsGate: function () {
+    var w = this.world;
+    if (!w || w.def.sub) return;                 // pipe rooms have no gate
+    if (this.obsGateX == null) {
+      this.obsGateX = w.obsGateX ? w.obsGateX() : null;
+      if (this.obsGateX == null) { this.obsGateOpen = true; return; }
+    }
+    if (this.obsGateOpen) return;
+
+    var p = w.player;
+    if (p.state !== 'play' && p.state !== 'hurt') return;
+    var dx = this.obsGateX - (p.x + p.w / 2);
+
+    if (this.obsDone(this.stageId)) {
+      // open a little before arrival so nobody walks into a wall that is about
+      // to vanish; once open it stays open for the rest of the run
+      if (dx < 150) {
+        this.obsGateOpen = true;
+        w.openObsGate();
+        this.hideBackArrow();
+        UI.banner('관찰카드 확인 완료!<br>다음 구역으로 이동할 수 있습니다.', 2600);
+        Audio_.sfx('core');
+        this.updateObsUI();
+      }
+      return;
+    }
+
+    // still missing cards: nudge, on a cooldown, only when actually near
+    if (dx > 0 && dx < 78) {
+      this.showBackArrow();
+      var now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      if (this._gateMsgT && now - this._gateMsgT < 4200) return;
+      this._gateMsgT = now;
+      var miss = this.missingObs(this.stageId);
+      Audio_.sfx('fail');
+      UI.banner('<b class="bn-title">관찰이 아직 끝나지 않았어요!</b><br>' +
+        '뒤쪽 파이프 아래의 관찰실에서 미션을 완료하고<br>관찰카드를 획득하세요.<br>' +
+        '<span class="bn-sub">현재 목표: 관찰실 미션 완료 ' +
+        (this.requiredObs(this.stageId).length - miss.length) + '/' +
+        this.requiredObs(this.stageId).length + '</span>', 5200);
+      var pipe = this.obsPipe();
+      if (pipe && w.highlightPipe) w.highlightPipe(pipe, 5);
+      this.updateObsUI();
+    } else if (dx > 190 || dx < -8) {
+      this.hideBackArrow();
+    }
+  },
+
+  /* A left-pointing marker pinned to the stage edge. DOM rather than canvas so it
+     is legible at every resolution and needs no art. */
+  showBackArrow: function () {
+    var a = $('#back-arrow');
+    if (a) a.classList.remove('hidden');
+  },
+  hideBackArrow: function () {
+    var a = $('#back-arrow');
+    if (a) a.classList.add('hidden');
   },
 
   /* Shown when the player reaches a locked exit. Cooldown-guarded so walking into
@@ -1070,6 +1152,7 @@ var Game = {
     $('#touch').classList.add('hidden');
     $('#prompt').classList.add('hidden');
     $('#status-label').classList.add('hidden');
+    this.hideBackArrow();
     UI.hideBanner();
     $('#clear-title').textContent = def.name + ' 클리어!';
     var im = $('#clear-img');
@@ -1079,12 +1162,22 @@ var Game = {
       '<span>점수 <b>' + this.score + '</b></span><span>생명 에너지 <b>' + this.orbs + '</b></span>' +
       '<span>관찰 카드 <b>' + this.cards.length + '</b></span>';
     UI.openOverlay('scr-clear');
+    // always start at the top: a previous stage's scroll position would otherwise
+    // carry over and open the next clear screen halfway down
+    var sc = $('#clear-scroll');
+    if (sc) sc.scrollTop = 0;
+    // drop any keys/touches still held from gameplay so nothing leaks through
+    Input.clear();
+    this._clearLock = false;
     Audio_.music('lab');
     this.clearCtx = def;
   },
 
   afterClear: function () {
     var self = this;
+    // a fast double-tap used to fire this twice and start two stage loads
+    if (this._clearLock) return;
+    this._clearLock = true;
     UI.closeOverlay('scr-clear');
     var def = this.clearCtx;
     var i = Level.ORDER.indexOf(def.id);
@@ -1342,6 +1435,8 @@ var Game = {
 
     if (!this.labelShown) $('#status-label').classList.add('hidden');
     this.labelShown = false;
+
+    if (this.state === 'playing') this.updateObsGate();
 
     if (this.state === 'menu') {
       // the title screen is image01.png + real DOM buttons; nothing to render here.

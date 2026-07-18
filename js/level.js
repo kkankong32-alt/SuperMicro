@@ -153,7 +153,22 @@ var S1 = {
       '####...#####'
     ]),
     /* 10. checkpoint */
-    seg(['....C.....', '..........', '..........'].concat(g(10))),
+    /* checkpoint, then the OBSERVATION GATE (K): 7 tiles tall, so it cannot be
+       jumped or sprinted over. It stands a short walk past the pipe — far enough
+       that finding the pipe still feels like exploring, close enough that walking
+       back costs seconds. The checkpoint sits just before it on purpose. */
+    seg([
+      '........K.',
+      '........K.',
+      '........K.',
+      '........K.',
+      '....C...K.',
+      '........K.',
+      '........K.',
+      '##########',
+      '##########',
+      '##########'
+    ]),
     /* 11. falling rotten wood under a bark ceiling */
     seg([
       '.BBBBBBBBBBB.',
@@ -217,22 +232,19 @@ var S1 = {
       '#########'
     ]),
     /* 17. goal */
-    /* The exit will not open until this stage's observation cards are collected,
-       and the observation pipe is ~100 tiles back. Rather than march the player
-       all the way there (and risk a one-way drop stranding them), the same room
-       gets a second entrance right beside the goal. Leaving it drops the player
-       back here, next to the exit. */
+    /* 17. goal — nothing to do here but finish. The observation gate sits back
+       near the pipe, so by the time the player arrives the learning is done. */
     seg([
       '...o.o.o....',
       '............',
       '......F.....',
-      '.PP.........',
-      '#pp#########',
-      '#pp#########',
-      '#pp#########'
+      '............',
+      '############',
+      '############',
+      '############'
     ])
   ]),
-  warps: { 0: { to: 'b1', kind: 'bonus' }, 1: { to: 'b1', kind: 'bonus' } },
+  warps: { 0: { to: 'b1', kind: 'bonus' } },
   devices: {
     /* One console opens the mission. The vent tower used to carry mission:'humidity'
        too, which made it a second, redundant start button for the same popup — and
@@ -354,7 +366,22 @@ var S2 = {
       '#####pp###',
       '#####pp###'
     ]),
-    seg(['....C.....', '..........', '..........'].concat(g(10))),
+    /* checkpoint, then the OBSERVATION GATE (K): 7 tiles tall, so it cannot be
+       jumped or sprinted over. It stands a short walk past the pipe — far enough
+       that finding the pipe still feels like exploring, close enough that walking
+       back costs seconds. The checkpoint sits just before it on purpose. */
+    seg([
+      '........K.',
+      '........K.',
+      '........K.',
+      '........K.',
+      '....C...K.',
+      '........K.',
+      '........K.',
+      '##########',
+      '##########',
+      '##########'
+    ]),
     /* pollution begins — first valve */
     seg([
       '..............',
@@ -435,22 +462,19 @@ var S2 = {
       '###....###',
       '###....###'
     ]),
-    /* The exit will not open until this stage's observation cards are collected,
-       and the observation pipe is ~100 tiles back. Rather than march the player
-       all the way there (and risk a one-way drop stranding them), the same room
-       gets a second entrance right beside the goal. Leaving it drops the player
-       back here, next to the exit. */
+    /* 17. goal — nothing to do here but finish. The observation gate sits back
+       near the pipe, so by the time the player arrives the learning is done. */
     seg([
       '...o.o.o....',
       '............',
       '......F.....',
-      '.PP.........',
-      '#pp#########',
-      '#pp#########',
-      '#pp#########'
+      '............',
+      '############',
+      '############',
+      '############'
     ])
   ]),
-  warps: { 0: { to: 'b2', kind: 'bonus' }, 1: { to: 'b2', kind: 'bonus' } },
+  warps: { 0: { to: 'b2', kind: 'bonus' } },
   devices: {
     G: { kind: 'valve', img: 'obj_water_purification_valve', w: 18, h: 20, mission: 'valves' },
     g: { kind: 'cpipe', img: 'obj_contamination_pipe', w: 26, h: 16, deco: true }
@@ -553,14 +577,18 @@ var S3 = {
     ]),
     seg(['....C.....', '..........', '..........'].concat(g(10))),
     /* MISSION A: shape classification -> the shape gate opens */
+    /* This wall used to be opened by a 'classify' device standing at its foot —
+       but that mission was the same bacteria photo-reading activity as the pipe
+       room, so the stage taught it twice. The device is gone and the full
+       activity now lives only in the pipe room; the wall became the gate. */
     seg([
-      '..........BB..',
-      '..........BB..',
-      '..........BB..',
-      '..........BB..',
-      '..........BB..',
-      '..........BB..',
-      '..G.......BB..',
+      '..........KK..',
+      '..........KK..',
+      '..........KK..',
+      '..........KK..',
+      '..........KK..',
+      '..........KK..',
+      '..........KK..',
       '##############',
       '##############',
       '##############'
@@ -626,28 +654,26 @@ var S3 = {
       '################',
       '################'
     ]),
-    /* The exit will not open until this stage's observation cards are collected,
-       and the observation pipe is ~100 tiles back. Rather than march the player
-       all the way there (and risk a one-way drop stranding them), the same room
-       gets a second entrance right beside the goal. Leaving it drops the player
-       back here, next to the exit. */
+    /* 17. goal — nothing to do here but finish. The observation gate sits back
+       near the pipe, so by the time the player arrives the learning is done. */
     seg([
       '...o.o.o....',
       '............',
       '......F.....',
-      '.PP.........',
-      '#pp#########',
-      '#pp#########',
-      '#pp#########'
+      '............',
+      '############',
+      '############',
+      '############'
     ])
   ]),
-  warps: { 0: { to: 'b3', kind: 'bonus' }, 1: { to: 'b3', kind: 'bonus' } },
+  warps: { 0: { to: 'b3', kind: 'bonus' } },
   devices: {
     G: { kind: 'multi', w: 22, h: 24 },
     g: { kind: 'purifytile', img: 'obj_sterilization_station', w: 20, h: 22, deco: true }
   },
   multiOrder: [
-    { kind: 'classify', img: 'obj_data_core', mission: 'classify' },
+    /* 'classify' removed: it repeated the pipe room's photo-reading activity.
+       Its wall is now the observation gate. */
     { kind: 'ferment', img: 'obj_fermentation_tank', mission: 'bacteria_roles' },
     { kind: 'purify', img: 'obj_water_purification_valve', mission: 'bacteria_habitat' }
   ],
@@ -655,10 +681,10 @@ var S3 = {
     title: '데이터 오류체를 정화하세요.',
     how: '빛나는 스위치를 작동하세요.',
     next: '막힌 벽이 열리고 포털이 활성화돼요.',
-    total: 3,
+    total: 2,
     hints: ['빛나는 화살표가 있는 스위치를 찾아보세요.',
             '스위치 바로 위에 서서 아래 방향키(↓)를 누르세요.',
-            '세 곳을 모두 정화하면 출구가 열려요.']
+            '두 곳을 모두 정화하면 출구가 열려요.']
   },
   facts: [
     '세균에는 공 모양, 막대 모양, 나선 모양 등이 있어요.',
@@ -896,6 +922,8 @@ function build(def) {
         case '#': grid[r][c] = 1; break;
         case '=': grid[r][c] = 2; break;
         case 'B': grid[r][c] = 3; meta[r][c] = { t: 'brick' }; break;
+        /* observation gate: a brick wall that only the observation cards open */
+        case 'K': grid[r][c] = 3; meta[r][c] = { t: 'brick', obsgate: true }; break;
         case '?': grid[r][c] = 3; meta[r][c] = { t: 'capsule' }; break;
         case 'S': grid[r][c] = 3; meta[r][c] = { t: 'spore' }; break;
         case 'D': grid[r][c] = 3; meta[r][c] = { t: 'data' }; break;
