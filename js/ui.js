@@ -1099,13 +1099,23 @@ Missions.bacteria_roles = function (ctx, done) {
     { img: 'impact_kimchi', t: '김치가 익어요', a: 'use', why: '세균이 김치를 익게 해요. (발효)' },
     { img: 'impact_yogurt', t: '요구르트를 만들어요', a: 'use', why: '세균이 우유를 요구르트로 만들어요. (발효)' },
     { img: 'impact_water_purification', t: '오염된 물을 정화해요', a: 'use', why: '오염 물질을 분해하는 세균을 이용해요.' },
-    { img: 'impact_bread_spoilage', t: '음식이 상해요', a: 'harm', why: '세균과 균류는 음식을 상하게 하기도 해요.' },
+    /* Was 빵 곰팡이(impact_bread_spoilage) — but mould is a fungus, not bacteria, so
+       it taught the wrong kingdom here. Replaced with a genuine bacterial harm:
+       tooth decay. The bread image is untouched and still used for 균류 material.
+       This one PNG lives in image/, so it carries an explicit `src` that bypasses
+       the assets/*.jpg convention below. */
+    { img: 'impact_bacteria_tooth_decay', src: 'image/impact_bacteria_tooth_decay.png',
+      t: '충치가 생겨요', a: 'harm', why: '입속의 일부 세균은 이를 손상시켜 충치를 일으킬 수 있어요.' },
     { img: 'impact_bacteria_disease', t: '질병을 일으켜요', a: 'harm', why: '어떤 세균은 다른 생물에게 질병을 일으켜요.' }
   ];
   var i = 0, sel = 0;
 
   var card = document.createElement('div'); card.className = 'role-card';
   var cimg = document.createElement('img'); cimg.alt = '';
+  // Report the exact missing path; never silently swap in another image.
+  cimg.addEventListener('error', function () {
+    console.error('[Super Micro] 사례 이미지를 불러오지 못했습니다:', cimg.getAttribute('src'));
+  });
   var ct = document.createElement('p');
   card.appendChild(cimg); card.appendChild(ct);
   var bins = document.createElement('div'); bins.className = 'bins';
@@ -1122,21 +1132,31 @@ Missions.bacteria_roles = function (ctx, done) {
   var mi = document.createElement('i'); meter.appendChild(mi);
   body().appendChild(card); body().appendChild(bins); body().appendChild(meter);
 
+  var NEUTRAL = '이 사례가 우리에게 도움을 주는지, 해를 주는지 골라 보세요.';
+  var answerLocked = false;   // true from a correct pick until the next card loads
+
   function mark() { btns.forEach(function (b, n) { b.classList.toggle('sel', n === sel); }); }
   function load() {
     var c = CASES[i];
-    if (c.img) { cimg.src = 'assets/' + c.img + '.jpg'; cimg.style.display = ''; }
+    // `src` wins when present (image/*.png assets); otherwise the assets/*.jpg rule
+    if (c.src) { cimg.src = c.src; cimg.style.display = ''; }
+    else if (c.img) { cimg.src = 'assets/' + c.img + '.jpg'; cimg.style.display = ''; }
     else cimg.style.display = 'none';
     ct.textContent = c.t + '  (' + (i + 1) + '/' + CASES.length + ')';
     mi.style.width = (i / CASES.length * 100) + '%';
     mark();
+    // wipe the previous card's answer/miss feedback so it never bleeds onto the
+    // new card; the reader starts every card on the same neutral prompt
+    hint(NEUTRAL);
+    answerLocked = false;
   }
   function pick(a) {
-    if (i >= CASES.length) return;      // ignore clicks during the closing beat
+    if (answerLocked || i >= CASES.length) return;   // one answer per card
     var c = CASES[i];
     if (a === c.a) {
+      answerLocked = true;              // block repeat taps during the pause
       Audio_.sfx('orb');
-      hint(c.why, 'good');
+      hint(c.why, 'good');              // THIS card's explanation, before i++
       i++;
       if (i >= CASES.length) {
         mi.style.width = '100%';
@@ -1147,21 +1167,21 @@ Missions.bacteria_roles = function (ctx, done) {
           UI.banner('세균은 <b>발효</b>와 <b>정화</b>에 이용되기도 하고, <b>질병</b>을 일으키는 경우도 있어요.', 4400);
           done(true);
         }, 1400);
-        return;
+        return;                         // stays locked through the closing beat
       }
-      setTimeout(load, 700);
+      setTimeout(load, 1000);           // ~1s to read the explanation, then next card
     } else {
       Audio_.sfx('fail');
       hint('다시 생각해 볼까요? 이 상황이 우리에게 도움이 되나요?', 'bad');
     }
   }
   ctx.key = function (Input) {
+    if (answerLocked) return;           // same lock for keyboard input
     if (Input.hit('left')) { sel = (sel + 1) % 2; mark(); Audio_.sfx('select'); }
     if (Input.hit('right')) { sel = (sel + 1) % 2; mark(); Audio_.sfx('select'); }
     if (Input.hit('confirm') || Input.hit('jump')) pick(['use', 'harm'][sel]);
   };
-  load();
-  hint('사례를 보고 알맞은 쪽을 골라 보세요.');
+  load();                              // sets the neutral prompt itself
 };
 
 /* ---------- 5. 생명과학 활용 (ending) ---------- */

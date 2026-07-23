@@ -63,6 +63,11 @@ var OPTIONAL = [];
  ['badge_bio_innovator', 'png']
 ].forEach(function (e) { OPTIONAL.push([e[0], 'assets/' + e[0] + '.' + e[1]]); });
 
+/* Direct-path optionals: real path given verbatim, NOT run through the
+   assets/*.<ext> rule above. The 세균 충치 사례 lives in image/ as a .png. */
+[['impact_bacteria_tooth_decay', 'image/impact_bacteria_tooth_decay.png']]
+  .forEach(function (e) { OPTIONAL.push(e); });
+
 /* Never-pending image load: resolves on load, error, OR timeout. */
 function loadImageSafe(src, timeoutMs) {
   return new Promise(function (resolve) {
